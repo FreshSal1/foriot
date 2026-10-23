@@ -3,24 +3,15 @@ import RPi.GPIO as GPIO
 from time import sleep
 
 REDpressed = False
-GREENpressed = False
-BLUEpressed = False
 
-layout = [[sg.Text('Press any hardware button', size=(None, None), key='-text-',
-auto_size_text=True, pad=((200,200),(300,300)), expand_x=True, expand_y=True,
-font=('Calibri', 48), justification='center')]]
+layout = [[sg.Text('Press any hardware button', size=(None, None), key='-text-', auto_size_text=True, pad=((200,200),(300,300)), expand_x=True, expand_y=True, font=('Calibri', 48), justification='center')]]
 
-window = sg.Window('RGB LED with Raspberry Pi', layout, size=(1280,800),
-finalize=True)
+window = sg.Window('RGB LED with Raspberry Pi', layout, size=(1280,800), finalize=True)
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD) #по простому номеру пина, от 1 до 40
 GPIO.setup(35, GPIO.OUT, initial=GPIO.LOW) #red led
-GPIO.setup(36, GPIO.OUT, initial=GPIO.LOW) #green led
-GPIO.setup(37, GPIO.OUT, initial=GPIO.LOW) #blue led
 GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #red button
-GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #green button
-GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #blue button
 
 def REDcallback(channel):
     global REDpressed
@@ -28,37 +19,16 @@ def REDcallback(channel):
     GPIO.output(35, REDpressed)
     print('RED')
 
-def GREENcallback(channel):
-    global GREENpressed
-    GREENpressed = not GREENpressed
-    GPIO.output(36, GREENpressed)
-    print('GREEN')
-
-def BLUEcallback(channel):
-    global BLUEpressed
-    BLUEpressed = not BLUEpressed
-    GPIO.output(37, BLUEpressed)
-    print('BLUE')
-
 
 GPIO.add_event_detect(7, GPIO.RISING, callback=REDcallback, bouncetime=300)
-GPIO.add_event_detect(11, GPIO.RISING, callback=GREENcallback, bouncetime=300)
-GPIO.add_event_detect(13, GPIO.RISING, callback=BLUEcallback, bouncetime=300)
 
 try:
     while True:
-        if not REDpressed and not GREENpressed and not BLUEpressed:
-            window['-text-'].update('Press any hardware button',
-text_color='white')
+        if not REDpressed:
+            window['-text-'].update('Press any hardware button', text_color='white')
             window.refresh()
         if REDpressed:
             window['-text-'].update('RED', text_color='red')
-            window.refresh()
-        if GREENpressed:
-            window['-text-'].update('GREEN', text_color='green')
-            window.refresh()
-        if BLUEpressed:
-            window['-text-'].update('BLUE', text_color='blue')
             window.refresh()
 
         sleep(0.1)
