@@ -1,14 +1,11 @@
 import PySimpleGUI as sg
 import RPi.GPIO as GPIO
 from time import sleep
+import threading
 
 REDpressed = False
 GREENpressed = False
 BLUEpressed = False
-
-REDprev = 0
-GREENprev = 0
-BLUEprev = 0
 
 layout = [[sg.Text('Press any hardware button', size=(None, None), key='-text-', auto_size_text=True, pad=((200,200),(300,300)), expand_x=True, expand_y=True, font=('Calibri', 48), justification='center')]]
 
@@ -25,39 +22,64 @@ GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  #red button
 GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #green button
 GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #blue button
 
+def REDcallback(channel):
+    global REDpressed
+    REDpressed = not REDpressed
+    GPIO.output(35, REDpressed)
+    print('RED')
+
+def GREENcallback(channel):
+    global GREENpressed
+    GREENpressed = not GREENpressed
+    GPIO.output(36, GREENpressed)
+    print('GREEN')
+
+def BLUEcallback(channel):
+    global BLUEpressed
+    BLUEpressed = not BLUEpressed
+    GPIO.output(37, BLUEpressed)
+    print('BLUE')
+
+# запасной вариант: если add_event_detect не работает, опрашиваем кнопку сами
+def poll_button(pin, callback):
+    prev = 0
+    while True:
+        cur = GPIO.input(pin)
+        if cur == 1 and prev == 0:
+            callback(pin)
+            sleep(0.3)  # защита от дребезга
+        prev = GPIO.input(pin)
+        sleep(0.02)
+
+def add_button(pin, callback):
+    try:
+        GPIO.remove_event_detect(pin)  # убираем «зависшее» отслеживание
+    except Exception:
+        pass
+    try:
+        GPIO.add_event_detect(pin, GPIO.RISING, callback=callback, bouncetime=300)
+    except RuntimeError:
+        print('add_event_detect не сработал на пине', pin, '- использую опрос')
+        threading.Thread(target=poll_button, args=(pin, callback), daemon=True).start()
+
+add_button(7, REDcallback)
+add_button(11, GREENcallback)
+add_button(13, BLUEcallback)
+
 try:
     while True:
-        # красная: переключаем в момент нажатия (было 0, стало 1)
-        if GPIO.input(7) == GPIO.HIGH and REDprev == 0:
-            REDpressed = not REDpressed
-            GPIO.output(35, REDpressed)
-            print('RED')
-        REDprev = GPIO.input(7)
-
-        # зелёная
-        if GPIO.input(11) == GPIO.HIGH and GREENprev == 0:
-            GREENpressed = not GREENpressed
-            GPIO.output(36, GREENpressed)
-            print('GREEN')
-        GREENprev = GPIO.input(11)
-
-        # синяя
-        if GPIO.input(13) == GPIO.HIGH and BLUEprev == 0:
-            BLUEpressed = not BLUEpressed
-            GPIO.output(37, BLUEpressed)
-            print('BLUE')
-        BLUEprev = GPIO.input(13)
-
-        # текст в окне
         if not REDpressed and not GREENpressed and not BLUEpressed:
             window['-text-'].update('Press any hardware button', text_color='white')
+            window.refresh()
         if REDpressed:
             window['-text-'].update('RED', text_color='red')
+            window.refresh()
         if GREENpressed:
             window['-text-'].update('GREEN', text_color='green')
+            window.refresh()
         if BLUEpressed:
             window['-text-'].update('BLUE', text_color='blue')
-        window.refresh()
+            window.refresh()
 
         sleep(0.1)
 
