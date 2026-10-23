@@ -1,7 +1,6 @@
 import PySimpleGUI as sg
 import RPi.GPIO as GPIO
 from time import sleep
-import threading
 
 REDpressed = False
 GREENpressed = False
@@ -40,31 +39,9 @@ def BLUEcallback(channel):
     GPIO.output(37, BLUEpressed)
     print('BLUE')
 
-# запасной вариант: если add_event_detect не работает, опрашиваем кнопку сами
-def poll_button(pin, callback):
-    prev = 0
-    while True:
-        cur = GPIO.input(pin)
-        if cur == 1 and prev == 0:
-            callback(pin)
-            sleep(0.3)  # защита от дребезга
-        prev = GPIO.input(pin)
-        sleep(0.02)
-
-def add_button(pin, callback):
-    try:
-        GPIO.remove_event_detect(pin)  # убираем «зависшее» отслеживание
-    except Exception:
-        pass
-    try:
-        GPIO.add_event_detect(pin, GPIO.RISING, callback=callback, bouncetime=300)
-    except RuntimeError:
-        print('add_event_detect не сработал на пине', pin, '- использую опрос')
-        threading.Thread(target=poll_button, args=(pin, callback), daemon=True).start()
-
-add_button(7, REDcallback)
-add_button(11, GREENcallback)
-add_button(13, BLUEcallback)
+GPIO.add_event_detect(7, GPIO.RISING, callback=REDcallback, bouncetime=300)
+GPIO.add_event_detect(11, GPIO.RISING, callback=GREENcallback, bouncetime=300)
+GPIO.add_event_detect(13, GPIO.RISING, callback=BLUEcallback, bouncetime=300)
 
 try:
     while True:
