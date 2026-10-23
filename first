@@ -1,73 +1,84 @@
 import PySimpleGUI as sg
 import RPi.GPIO as GPIO
 from time import sleep
+from picamera2 import Picamera2
+import os
 
-REDpressed = False
-GREENpressed = False
-BLUEpressed = False
+servo_angle = 0
+step = 10
+min_angle = 0
+max_angle = 160
 
-layout = [[sg.Text('Press any hardware button', size=(None, None), key='-text-',
-auto_size_text=True, pad=((200,200),(300,300)), expand_x=True, expand_y=True,
-font=('Calibri', 48), justification='center')]]
+camera = Picamera2()
+camera.configure(camera.create_still_configuration(main={"size": (800, 600)}))
+camera.set_controls({"ExposureTime": 60000, "AnalogueGain": 2.0}) #выдержка в микросекундах и яркость (усиление 2.0 ~ ISO 200)
+camera.start()
 
-window = sg.Window('RGB LED with Raspberry Pi', layout, size=(1280,800),
-finalize=True)
+layout = [[sg.Image(size=(800, 600), key='-image-', pad=((5,5),(5,5)), background_color='white', expand_x=True)],
+        [sg.Button('LEFT', key='-left-', size=(4,1), enable_events=True, expand_x=True, font=('Calibri', 48)), 
+         sg.Button('TAKE PICTURE', key='-pic-', size=(12,1), enable_events=True, expand_x=True, font=('Calibri', 48)),
+         sg.Button('RIGHT', key='-right-', size=(5,1), enable_events=True, expand_x=True, font=('Calibri', 48))]]
+
+window = sg.Window('Spying Eye', layout, size=(1280,800), finalize=True)
 
 GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BOARD) #по простому номеру пина, от 1 до 40
-GPIO.setup(35, GPIO.OUT, initial=GPIO.LOW) #red led
-GPIO.setup(36, GPIO.OUT, initial=GPIO.LOW) #green led
-GPIO.setup(37, GPIO.OUT, initial=GPIO.LOW) #blue led
-GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #red button
-GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #green button
-GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #blue button
+GPIO.setmode(GPIO.BOARD) #по простому номеру пина, от 1 до 40 
+GPIO.setup(12, GPIO.OUT)
+servo = GPIO.PWM(12, 100) #открыли 12 пин для ШИМ с частотой 100Гц
+servo.start(50) #duty cycle = 50%
+servo.ChangeFrequency(50) #поменяли частоту на 50 Гц
+servo.ChangeDutyCycle(75) #а duty cycle на 75%
 
-def REDcallback(channel):
-    global REDpressed
-    REDpressed = not REDpressed
-    GPIO.output(35, REDpressed)
-    print('RED')
-
-def GREENcallback(channel):
-    global GREENpressed
-    GREENpressed = not GREENpressed
-    GPIO.output(36, GREENpressed)
-    print('GREEN')
-
-def BLUEcallback(channel):
-    global BLUEpressed
-    BLUEpressed = not BLUEpressed
-    GPIO.output(37, BLUEpressed)
-    print('BLUE')
-
-
-GPIO.add_event_detect(7, GPIO.RISING, callback=REDcallback, bouncetime=300)
-GPIO.add_event_detect(11, GPIO.RISING, callback=GREENcallback, bouncetime=300)
-GPIO.add_event_detect(13, GPIO.RISING, callback=BLUEcallback, bouncetime=300)
-
+def set_angle(servo1, angle):
+    global servo
+    duty = angle / 18 + 2
+    GPIO.output(servo1, True)
+    servo.ChangeDutyCycle(duty)
+    sleep(1)
+    GPIO.output(servo1, False)
+    servo.ChangeDutyCycle(0)
+    
 try:
     while True:
-        if not REDpressed and not GREENpressed and not BLUEpressed:
-            window['-text-'].update('Press any hardware button',
-text_color='white')
-            window.refresh()
-        if REDpressed:
-            window['-text-'].update('RED', text_color='red')
-            window.refresh()
-        if GREENpressed:
-            window['-text-'].update('GREEN', text_color='green')
-            window.refresh()
-        if BLUEpressed:
-            window['-text-'].update('BLUE', text_color='blue')
-            window.refresh()
-
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit'):
+            break
+        # на всякий случай
+        if event == sg.WIN_CLOSED or event == 'Exit':
+            break
+        #нажата кнопка LEFT 
+        if event == '-left-':
+            servo_angle = servo_angle - step
+            if servo_angle < min_angle:
+                servo_angle = min_angle
+            set_angle(12, servo_angle)
+        #нажата кнопка RIGHT
+        elif event == '-right-':
+            servo_angle = servo_angle + step
+            if servo_angle > max_angle:
+                servo_angle = max_angle
+            set_angle(12, servo_angle)
+        elif event == '-pic-':
+            #работа с камерой
+            try:
+                filename = os.path.join('./', 'image.png')
+                camera.capture_file(filename)
+                window['-image-'].update(filename = filename)
+                window.refresh()
+            except Exception as E:
+                print(f'** Error {E} **')
+                pass        # что-то пошло не так
+        
         sleep(0.1)
 
 except KeyboardInterrupt:
     window.close()
-    GPIO.cleanup()
-
-
+    camera.close()
+    servo.stop()
+    GPIO.cleanup()    
+    
 # закрываем окно и освобождаем используемые ресурсы
 window.close()
+camera.close()
+servo.stop()
 GPIO.cleanup()
