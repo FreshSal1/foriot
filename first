@@ -1,0 +1,49 @@
+import PySimpleGUI as sg
+import RPi.GPIO as GPIO
+
+# Нумерация по физическим пинам (от 1 до 40)
+# кнопка (пин): (название, пин светодиода, цвет текста)
+BUTTONS = {
+    7:  ('RED',   35, 'red'),
+    11: ('GREEN', 36, 'green'),
+    13: ('BLUE',  37, 'blue'),
+}
+
+layout = [[sg.Text('Press any hardware button', key='-text-', auto_size_text=True,
+                   pad=((200, 200), (300, 300)), expand_x=True, expand_y=True,
+                   font=('Calibri', 48), justification='center')]]
+
+window = sg.Window('RGB LED with Raspberry Pi', layout, size=(1280, 800), finalize=True)
+
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BOARD)
+
+# настраиваем все кнопки (вход) и все цвета светодиода (выход)
+for btn_pin, (name, led_pin, color) in BUTTONS.items():
+    GPIO.setup(btn_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(led_pin, GPIO.OUT, initial=GPIO.LOW)
+
+try:
+    while True:
+        # read с таймаутом: окно остаётся живым и реагирует на закрытие
+        event, _ = window.read(timeout=50)
+        if event == sg.WIN_CLOSED:
+            break
+
+        pressed = []
+        for btn_pin, (name, led_pin, color) in BUTTONS.items():
+            if GPIO.input(btn_pin) == GPIO.HIGH:
+                GPIO.output(led_pin, GPIO.HIGH)
+                pressed.append((name, color))
+            else:
+                GPIO.output(led_pin, GPIO.LOW)
+
+        if pressed:
+            names = ' + '.join(n for n, _ in pressed)
+            window['-text-'].update(names, text_color=pressed[-1][1])
+
+except KeyboardInterrupt:  # Ctrl+C
+    pass
+finally:
+    window.close()
+    GPIO.cleanup()
