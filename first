@@ -1,47 +1,58 @@
 import PySimpleGUI as sg
 import RPi.GPIO as GPIO
+from time import sleep
 
-# кнопка (пин BOARD): (название, пин светодиода, цвет текста)
-BUTTONS = {
-    7:  ('RED',   35, 'red'),
-    11: ('GREEN', 36, 'green'),
-    13: ('BLUE',  37, 'blue'),
-}
+layout = [[sg.Text('Press any hardware button', size=(None, None), key='-text-', auto_size_text=True, pad=((200,200),(300,300)), expand_x=True, expand_y=True, font=('Calibri', 48), justification='center')]]
 
-layout = [[sg.Text('Press any hardware button', key='-text-',
-                   font=('Calibri', 48), justification='center',
-                   expand_x=True, expand_y=True, pad=((200, 200), (300, 300)))]]
-
-window = sg.Window('RGB LED with Raspberry Pi', layout, size=(1280, 800), finalize=True)
+window = sg.Window('RGB LED with Raspberry Pi', layout, size=(1280,800), finalize=True)
 
 GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BOARD) #по простому номеру пина, от 1 до 40
 
-for btn_pin, (name, led_pin, color) in BUTTONS.items():
-    GPIO.setup(btn_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    GPIO.setup(led_pin, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(35, GPIO.OUT, initial=GPIO.LOW) #red led
+GPIO.setup(36, GPIO.OUT, initial=GPIO.LOW) #green led
+GPIO.setup(37, GPIO.OUT, initial=GPIO.LOW) #blue led
+
+GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  #red button
+GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #green button
+GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #blue button
+
 
 try:
     while True:
-        event, _ = window.read(timeout=50)
-        if event == sg.WIN_CLOSED:
-            break
+        # красная кнопка
+        if GPIO.input(7) == GPIO.HIGH:
+            GPIO.output(35, GPIO.HIGH)
+            print('RED')
+            window.Element('-text-').update('RED', text_color='red')
+            window.refresh()
+        else:
+            GPIO.output(35, GPIO.LOW)
 
-        pressed = []
-        for btn_pin, (name, led_pin, color) in BUTTONS.items():
-            if GPIO.input(btn_pin) == GPIO.HIGH:
-                GPIO.output(led_pin, GPIO.HIGH)
-                pressed.append((name, color))
-            else:
-                GPIO.output(led_pin, GPIO.LOW)
+        # зелёная кнопка
+        if GPIO.input(11) == GPIO.HIGH:
+            GPIO.output(36, GPIO.HIGH)
+            print('GREEN')
+            window.Element('-text-').update('GREEN', text_color='green')
+            window.refresh()
+        else:
+            GPIO.output(36, GPIO.LOW)
 
-        if pressed:
-            names = ' + '.join(n for n, _ in pressed)
-            print(names)
-            window['-text-'].update(names, text_color=pressed[-1][1])
+        # синяя кнопка
+        if GPIO.input(13) == GPIO.HIGH:
+            GPIO.output(37, GPIO.HIGH)
+            print('BLUE')
+            window.Element('-text-').update('BLUE', text_color='blue')
+            window.refresh()
+        else:
+            GPIO.output(37, GPIO.LOW)
 
-except KeyboardInterrupt:
-    pass
-finally:
+        sleep(0.1)
+
+except KeyboardInterrupt: # если нажали Ctrl+C или крестик в окне
     window.close()
     GPIO.cleanup()
+
+# закрываем окно и освобождаем используемые ресурсы
+window.close()
+GPIO.cleanup()
