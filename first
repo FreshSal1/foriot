@@ -13,7 +13,8 @@ lvl1 = 1022.69 #Паскалей, или 767.2 мм.рт.ст.
 lvl2 = 1009.14 #Паскалей, или 756.92 мм.рт.ст.
 tempmeltinglvl = 30
 
-layout = [[sg.Text('temperature:', size=(None, None), key='-temp-', auto_size_text=True, pad=((5,5),(200,0)), expand_x=True, font=('Calibri', 48), text_color = 'green', justification='center')],
+layout = [[sg.Text('temperature:', size=(None, None), key='-temp-', auto_size_text=True, pad=((5,5),(120,0)), expand_x=True, font=('Calibri', 48), text_color = 'green', justification='center')],
+[sg.Text('humidity:', size=(None, None), key='-hum-', auto_size_text=True, pad=((5,5),(0,0)), expand_x=True, font=('Calibri', 48), text_color = 'deepskyblue', justification='center')],
 [sg.Text('pressure:', size=(None, None), key='-press-', auto_size_text=True, pad=((5,5),(0,0)), expand_x=True, font=('Calibri', 48), text_color = 'violet', justification='center')],
 [sg.Text('weather:', size=(None, None), key='-weather-', auto_size_text=True, pad=((5,5),(0,0)), expand_x=True, font=('Calibri', 48), text_color = 'orange', justification='center')]]
 
@@ -30,9 +31,12 @@ try:
     while True:
         #считываем данные
         data = bme280.sample(bus, address, calibration_params)
-        #отображаем их в интерфейсе
+        #переводим давление из гектопаскалей (миллибар) в мм.рт.ст.
+        pressure_mmhg = data.pressure * 0.750062
+        #отображаем данные в интерфейсе
         window['-temp-'].update('temperature: ' + str(round(data.temperature)) + ' C')
-        window['-press-'].update('pressure: ' + str(round(data.pressure)) + ' mb')
+        window['-hum-'].update('humidity: ' + str(round(data.humidity)) + ' %')
+        window['-press-'].update('pressure: ' + str(round(pressure_mmhg)) + ' mmHg')
         #и на светодиодах
         if data.temperature >= tempmeltinglvl:
             GPIO.output(29, GPIO.HIGH)
@@ -61,9 +65,13 @@ try:
         window.refresh()
         #и в консоли
         print(data.temperature)
-        print(data.pressure)
+        print(data.humidity)
+        print(pressure_mmhg)
         print(weather_forecast)
         sleep(1)
+
+except KeyboardInterrupt:
+    pass
 
 except Exception as E:
     print(f'** Error {E} **')
