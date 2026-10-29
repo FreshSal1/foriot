@@ -1,3 +1,4 @@
+vless://667e35ce-04da-42fc-80d1-8ec233dbce03@45.43.137.160:8443/?type=tcp&encryption=none&flow=&sni=www.teamspeak.com&fp=chrome&security=reality&pbk=KBrLMNqjErH564bIESiQiDC8pVMLb_2pafIhL8nMmFI&sid=a285a2#Ppol-8443-me
 import PySimpleGUI as sg
 import RPi.GPIO as GPIO
 from time import sleep
