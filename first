@@ -1,3 +1,4 @@
+vless://21932de5-fc92-4cab-9d31-7dbb86e9a49f@192.145.30.199:443/?type=tcp&encryption=none&flow=&sni=www.aviasales.com&fp=chrome&security=reality&pbk=dWa5QNbq7E8KhjueZUMMBpY0rWWVoil72H1PDm7E-lQ&sid=bcc48a7d&packetEncoding=xudp#Swed-me
 vless://667e35ce-04da-42fc-80d1-8ec233dbce03@45.43.137.160:8443/?type=tcp&encryption=none&flow=&sni=www.teamspeak.com&fp=chrome&security=reality&pbk=KBrLMNqjErH564bIESiQiDC8pVMLb_2pafIhL8nMmFI&sid=a285a2#Ppol-8443-me
 import PySimpleGUI as sg
 import RPi.GPIO as GPIO
